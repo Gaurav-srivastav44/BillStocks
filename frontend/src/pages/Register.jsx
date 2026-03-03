@@ -169,7 +169,7 @@ export default function Register() {
               type="button"
               onClick={() =>
                 (window.location.href =
-                  "http://localhost:5000/api/auth/google")
+                  "https://billstocks.onrender.com/api/auth/google")
               }
               className="w-full flex items-center justify-center gap-3 py-3 border border-gray-300 rounded-full hover:bg-gray-100 transition"
             >
