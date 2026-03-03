@@ -10,7 +10,6 @@ import {
   RefreshCcw, 
   Printer, 
   ShoppingCart,
-  Percent,
   Calculator
 } from "lucide-react";
 import api from "../api";

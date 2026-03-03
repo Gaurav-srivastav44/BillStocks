@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import management from "../assets/management.png";
 import billing from "../assets/billing.png";
-import { FiBox, FiBarChart2, FiCheckCircle, FiLayers, FiArrowRight, FiSearch, FiShield, FiZap, FiDatabase, FiUser, FiPackage, FiHash, FiFileText, FiDollarSign } from "react-icons/fi";
+import {FiBarChart2, FiCheckCircle, FiPackage, FiFileText} from "react-icons/fi";
 
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.2, delayChildren: 0.2 } } };
 const itemVariants = { hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 80 } } };

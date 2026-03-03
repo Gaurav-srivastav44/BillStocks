@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Plus, Trash2, Save, ShoppingCart, Truck, Receipt } from "lucide-react";
+import { Plus, Trash2, Save, ShoppingCart } from "lucide-react";
 import api from "../api";
 
 const PurchaseEntry = () => {
