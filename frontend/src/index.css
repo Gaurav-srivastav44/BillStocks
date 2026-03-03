@@ -1,0 +1,31 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+
+/* Utilities */
+.card {@apply bg-white rounded-xl border border-slate-200 shadow-sm p-6;}
+.section-header {@apply flex items-center justify-between mb-4 gap-4;}
+.primary-button {@apply inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-60;}
+.secondary-button {@apply inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 text-slate-700 hover:bg-slate-50 transition;}
+.secondary-button.active {@apply bg-blue-50 border-blue-300 text-blue-700;}
+.danger-button {@apply inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-semibold border border-red-300 text-red-600 bg-red-50 hover:bg-red-100 transition;}
+.muted {@apply text-sm text-slate-500;}
+.inline-list {@apply flex items-center gap-3 flex-wrap;}
+.table {@apply min-w-full text-sm border border-slate-200 rounded-xl overflow-hidden;}
+.table thead {@apply bg-slate-50 text-slate-700;}
+.table th {@apply px-3 py-2.5 text-left font-semibold border-b border-slate-200;}
+.table td {@apply px-3 py-2.5 align-middle border-b border-slate-100;}
+.table tbody tr:hover {@apply bg-slate-50;}
+.table-actions {@apply flex items-center gap-2;}
+.badge {@apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold;}
+.badge.danger {@apply bg-red-100 text-red-700;}
+.pill {@apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700;}
+.form-grid {@apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;}
+.form-control {@apply flex flex-col gap-1;}
+.form-control label {@apply text-sm font-medium text-slate-700;}
+.form-control input, .form-control select, .form-control textarea {@apply w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-transparent;}
+.totals {@apply mt-4 space-y-1 text-sm text-slate-800;}
+.totals div {@apply flex justify-between;}
+.grid-3 {@apply grid-cols-1 md:grid-cols-3 gap-4;}
+
+/* Animated Gradient (for navbar hover box) */
+@keyframes gradientMove {0%{background-position:0% 50%;}100%{background-position:200% 50%;}}
+.animate-gradient {background-size:200% 200%; animation:gradientMove 3s linear infinite;}
