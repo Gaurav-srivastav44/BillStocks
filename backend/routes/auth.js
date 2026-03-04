@@ -116,8 +116,7 @@ router.get(
   passport.authenticate("google", { session: false }),
   (req, res) => {
     const token = req.user.token;
-    res.redirect(`http://localhost:3000/login?token=${token}`);
-  }
+res.redirect(`https://billstocks.netlify.app/login?token=${token}`);  }
 );
 
 /* CURRENT USER */
