@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import api from "../api";
 import html2pdf from "html2pdf.js";
 import { useAuth } from "../context/AuthContext";
-import { Printer, Download, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Printer, Download, ArrowLeft } from "lucide-react";
 
 const InvoicePrintView = () => {
   const { id } = useParams();
