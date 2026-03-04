@@ -1,19 +1,19 @@
 import dotenv from "dotenv";
-dotenv.config();   // 🔥 ADD THIS AT TOP
+dotenv.config();
 
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 
-console.log("Google Client ID:", process.env.GOOGLE_CLIENT_ID); // optional debug
+console.log("Google Client ID:", process.env.GOOGLE_CLIENT_ID);
 
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:5000/api/auth/google/callback",
+      callbackURL: "https://billstocks.onrender.com/api/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
