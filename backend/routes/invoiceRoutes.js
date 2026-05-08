@@ -2,9 +2,11 @@ import express from "express";
 import Invoice from "../models/Invoice.js";
 import Product from "../models/Product.js";
 import PDFDocument from "pdfkit";
+import multer from "multer";
 import sendInvoiceMail from "../utils/sendInvoiceMail.js";
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Generate invoice numbers separately for each user
 async function getNextInvoiceNumber(userId) {
@@ -176,6 +178,27 @@ router.get("/:id", async (req, res) => {
     res.json({ data: result });
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch invoice" });
+  }
+});
+
+router.post("/send-mail", upload.single("pdf"), async (req, res) => {
+  try {
+    const { customerEmail, customerName, invoiceNumber } = req.body;
+    const pdfFile = req.file;
+
+    if (!customerEmail || !customerName || !invoiceNumber) {
+      return res.status(400).json({ message: "Missing invoice email fields" });
+    }
+    if (!pdfFile?.buffer) {
+      return res.status(400).json({ message: "Invoice PDF is required" });
+    }
+
+    await sendInvoiceMail(customerEmail, customerName, invoiceNumber, pdfFile.buffer);
+
+    res.json({ message: "Invoice email sent" });
+  } catch (error) {
+    console.log("SEND MAIL ROUTE ERROR:", error);
+    res.status(500).json({ message: "Failed to send invoice email" });
   }
 });
 

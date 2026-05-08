@@ -8,6 +8,7 @@ import { Printer, Download, ArrowLeft } from "lucide-react";
 const InvoicePrintView = () => {
   const { id } = useParams();
   const [invoice, setInvoice] = useState(null);
+  const [mailSending, setMailSending] = useState(false);
   const printRef = useRef();
   const { user } = useAuth();
 
@@ -31,6 +32,49 @@ const InvoicePrintView = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleSendMail = async () => {
+    try {
+      setMailSending(true);
+      const element = printRef.current;
+      const opt = {
+        margin: 0,
+        filename: `Invoice-${invoice.invoiceNumber}.pdf`,
+        image: { type: "jpeg", quality: 1 },
+        html2canvas: {
+          scale: 3,
+          useCORS: true,
+        },
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation: "portrait",
+        },
+      };
+
+      const worker = html2pdf().set(opt).from(element);
+      const pdfBlob = await worker.outputPdf("blob");
+
+      const formData = new FormData();
+      formData.append("pdf", pdfBlob, `Invoice-${invoice.invoiceNumber}.pdf`);
+      formData.append("customerEmail", invoice.customerEmail);
+      formData.append("customerName", invoice.customerName);
+      formData.append("invoiceNumber", invoice.invoiceNumber);
+
+      await api.post("/invoices/send-mail", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      alert("Invoice sent successfully");
+    } catch (error) {
+      console.log(error);
+      alert("Failed to send invoice");
+    } finally {
+      setMailSending(false);
+    }
   };
 
   if (!invoice)
@@ -67,6 +111,14 @@ const InvoicePrintView = () => {
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl font-bold hover:bg-slate-800 transition shadow-md text-sm"
           >
             <Download size={16} /> PDF
+          </button>
+
+          <button
+            onClick={handleSendMail}
+            disabled={mailSending || !invoice?.customerEmail}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700 transition shadow-md text-sm disabled:opacity-60"
+          >
+            {mailSending ? "Sending..." : "Send Mail"}
           </button>
         </div>
       </div>
