@@ -11,6 +11,10 @@ const sendMail = async (email, name) => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
+      connectionTimeout: 10000,
     });
 
     const mailOptions = {
@@ -41,10 +45,7 @@ const sendMail = async (email, name) => {
               Welcome to BillStocks 🚀
             </h1>
 
-            <p style="
-              font-size:16px;
-              color:#333;
-            ">
+            <p style="font-size:16px;color:#333;">
               Hello <strong>${name}</strong>,
             </p>
 
@@ -62,19 +63,9 @@ const sendMail = async (email, name) => {
               color:#555;
               line-height:1.7;
             ">
-              You can now manage:
+              You can now manage inventory, invoices,
+              billing, purchases and reports efficiently.
             </p>
-
-            <ul style="
-              color:#444;
-              line-height:1.8;
-              padding-left:20px;
-            ">
-              <li>📦 Product Inventory</li>
-              <li>🧾 Invoices & Billing</li>
-              <li>💰 Purchase Records</li>
-              <li>📊 Reports & Analytics</li>
-            </ul>
 
             <div style="text-align:center;margin-top:35px;">
               <a
