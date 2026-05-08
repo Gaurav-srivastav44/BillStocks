@@ -1,23 +1,32 @@
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import nodemailer from "nodemailer";
 
 const sendMail = async (email, name) => {
   try {
-    const data = await resend.emails.send({
-      from: "onboarding@resend.dev",
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
       to: email,
       subject: "Welcome to BillStocks 🚀",
       html: `
         <div style="font-family:sans-serif;padding:20px">
           <h1>Welcome ${name}</h1>
           <p>Your account has been created successfully.</p>
-          <p>Thanks for joining BillStocks 🚀</p>
+          <p>Thanks for using BillStocks 🚀</p>
         </div>
       `,
-    });
+    };
 
-    console.log("EMAIL SENT:", data);
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("EMAIL SENT:", info.response);
+
   } catch (error) {
     console.log("EMAIL ERROR:", error);
   }
