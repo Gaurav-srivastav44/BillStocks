@@ -4,17 +4,17 @@ const sendMail = async (email, name) => {
   try {
 
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
+      host: "smtp-relay.brevo.com",
       port: 587,
       secure: false,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
     });
 
     const mailOptions = {
-      from: `BillStocks <${process.env.EMAIL_USER}>`,
+      from: `BillStocks <${process.env.SMTP_USER}>`,
       to: email,
       subject: "Welcome to BillStocks 🚀",
       html: `
@@ -35,8 +35,8 @@ const sendMail = async (email, name) => {
 
             <h1 style="
               color:#2563eb;
-              margin-bottom:10px;
               text-align:center;
+              margin-bottom:20px;
             ">
               Welcome to BillStocks 🚀
             </h1>
@@ -44,7 +44,6 @@ const sendMail = async (email, name) => {
             <p style="
               font-size:16px;
               color:#333;
-              margin-top:30px;
             ">
               Hello <strong>${name}</strong>,
             </p>
@@ -73,11 +72,11 @@ const sendMail = async (email, name) => {
             ">
               <li>📦 Product Inventory</li>
               <li>🧾 Invoices & Billing</li>
-              <li>💰 Purchase & Sales Records</li>
-              <li>📊 Business Reports & Analytics</li>
+              <li>💰 Purchase Records</li>
+              <li>📊 Reports & Analytics</li>
             </ul>
 
-            <div style="text-align:center;margin:35px 0;">
+            <div style="text-align:center;margin-top:35px;">
               <a
                 href="https://billstocks.netlify.app"
                 style="
@@ -93,14 +92,6 @@ const sendMail = async (email, name) => {
                 Open BillStocks
               </a>
             </div>
-
-            <p style="
-              font-size:14px;
-              color:#777;
-              line-height:1.6;
-            ">
-              If you did not create this account, please ignore this email.
-            </p>
 
             <hr style="
               border:none;
