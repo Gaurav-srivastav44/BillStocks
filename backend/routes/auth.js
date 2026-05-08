@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import passport from "passport";
 import User from "../models/User.js";
 import authMiddleware from "../middleware/authMiddleware.js";
+import sendMail from "../utils/sendMail.js";
 
 const router = express.Router();
 
@@ -21,12 +22,17 @@ router.post("/register", async (req, res) => {
     } = req.body;
 
     if (!name || !email || !password || !firmName) {
-      return res.status(400).json({ message: "Name, email, password and firm name are required" });
+      return res.status(400).json({
+        message: "Name, email, password and firm name are required",
+      });
     }
 
     const existing = await User.findOne({ email });
+
     if (existing) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({
+        message: "User already exists",
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -40,6 +46,8 @@ router.post("/register", async (req, res) => {
       firmAddress,
       firmPhone,
     });
+
+    await sendMail(email, name);
 
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET not defined in .env");
@@ -67,21 +75,31 @@ router.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password required" });
+      return res.status(400).json({
+        message: "Email and password required",
+      });
     }
 
     const user = await User.findOne({ email });
+
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({
+        message: "Invalid credentials",
+      });
     }
 
     if (!user.password) {
-      return res.status(400).json({ message: "Password not set for this user" });
+      return res.status(400).json({
+        message: "Password not set for this user",
+      });
     }
 
     const match = await bcrypt.compare(password, user.password);
+
     if (!match) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({
+        message: "Invalid credentials",
+      });
     }
 
     if (!process.env.JWT_SECRET) {
@@ -107,7 +125,7 @@ router.get(
   "/google",
   passport.authenticate("google", {
     scope: ["profile", "email"],
-    prompt: "select_account"
+    prompt: "select_account",
   })
 );
 
@@ -116,7 +134,11 @@ router.get(
   passport.authenticate("google", { session: false }),
   (req, res) => {
     const token = req.user.token;
-res.redirect(`https://billstocks.netlify.app/login?token=${token}`);  }
+
+    res.redirect(
+      `https://billstocks.netlify.app/login?token=${token}`
+    );
+  }
 );
 
 /* CURRENT USER */
@@ -124,21 +146,35 @@ router.get("/me", authMiddleware, (req, res) => {
   res.json({ data: req.user });
 });
 
-/* UPDATE PROFILE (firm details) */
+/* UPDATE PROFILE */
 router.put("/profile", authMiddleware, async (req, res) => {
   try {
-    const { firmName, firmGst, firmAddress, firmPhone } = req.body;
+    const {
+      firmName,
+      firmGst,
+      firmAddress,
+      firmPhone,
+    } = req.body;
 
     const updated = await User.findByIdAndUpdate(
       req.user._id,
-      { firmName, firmGst, firmAddress, firmPhone },
+      {
+        firmName,
+        firmGst,
+        firmAddress,
+        firmPhone,
+      },
       { new: true }
     ).select("-password");
 
     res.json({ data: updated });
+
   } catch (err) {
     console.error("PROFILE UPDATE ERROR:", err);
-    res.status(500).json({ message: "Failed to update profile" });
+
+    res.status(500).json({
+      message: "Failed to update profile",
+    });
   }
 });
 
