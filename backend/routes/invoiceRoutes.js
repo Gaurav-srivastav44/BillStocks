@@ -1,6 +1,8 @@
 import express from "express";
 import Invoice from "../models/Invoice.js";
 import Product from "../models/Product.js";
+import PDFDocument from "pdfkit";
+import sendInvoiceMail from "../utils/sendInvoiceMail.js";
 
 const router = express.Router();
 
@@ -32,9 +34,13 @@ function computeTotals(items, discountRate, gstRate, roundOff) {
 
 router.post("/", async (req, res) => {
   try {
-    const { customerName, accountId, discountRate, gstRate, roundOff, items } = req.body;
+    const { customerName, customerEmail, accountId, discountRate, gstRate, roundOff, items } =
+      req.body;
     if (!items || !items.length) {
       return res.status(400).json({ success: false, message: "At least one item required" });
+    }
+    if (!customerEmail) {
+      return res.status(400).json({ success: false, message: "Customer email is required" });
     }
 
     const totals = computeTotals(items, discountRate, gstRate, roundOff);
@@ -64,6 +70,7 @@ router.post("/", async (req, res) => {
       userId: req.user._id,
       invoiceNumber,
       customerName: customerName || "Walk-in Customer",
+      customerEmail,
       accountId: accountId || undefined,
       discountRate: Number(discountRate) || 0,
       gstRate: Number(gstRate) || 0,
@@ -74,6 +81,60 @@ router.post("/", async (req, res) => {
       grandTotal: totals.grandTotal,
       items: invoiceItems,
     });
+
+    const doc = new PDFDocument({ margin: 40 });
+    const buffers = [];
+
+    doc.on("data", (chunk) => buffers.push(chunk));
+
+    const pdfPromise = new Promise((resolve) => {
+      doc.on("end", () => {
+        resolve(Buffer.concat(buffers));
+      });
+    });
+
+    doc.fontSize(24).fillColor("#2563eb").text("BillStocks Invoice", {
+      align: "center",
+    });
+
+    doc.moveDown(2);
+
+    doc
+      .fontSize(14)
+      .fillColor("black")
+      .text(`Invoice Number: ${invoice.invoiceNumber}`)
+      .text(`Customer Name: ${invoice.customerName}`)
+      .text(`Customer Email: ${invoice.customerEmail}`)
+      .text(`Total Amount: Rs.${invoice.grandTotal}`)
+      .text(`Date: ${new Date().toLocaleDateString()}`);
+
+    doc.moveDown(2);
+
+    doc.fontSize(18).fillColor("#2563eb").text("Products");
+
+    invoiceItems.forEach((item, index) => {
+      doc
+        .fontSize(13)
+        .fillColor("black")
+        .text(`${index + 1}. ${item.name} | Qty: ${item.quantity} | Price: Rs.${item.price}`);
+    });
+
+    doc.moveDown(3);
+
+    doc.fontSize(14).fillColor("green").text("Thank you for choosing BillStocks!", {
+      align: "center",
+    });
+
+    doc.end();
+
+    const pdfBuffer = await pdfPromise;
+
+    await sendInvoiceMail(
+      invoice.customerEmail,
+      invoice.customerName,
+      invoice.invoiceNumber,
+      pdfBuffer
+    );
 
     res.status(201).json({ success: true, data: invoice });
   } catch (err) {

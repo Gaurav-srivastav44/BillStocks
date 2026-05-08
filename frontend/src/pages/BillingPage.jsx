@@ -26,6 +26,7 @@ export default function BillingPage() {
   const [gstRate, setGstRate] = useState(0);
   const [roundOff, setRoundOff] = useState(0);
   const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -110,6 +111,7 @@ export default function BillingPage() {
     try {
       const res = await api.post("/invoices", {
         customerName: customerName || "Walk-in Customer",
+        customerEmail,
         accountId: accountId || undefined,
         discountRate: Number(discountRate),
         gstRate: Number(gstRate),
@@ -133,6 +135,7 @@ export default function BillingPage() {
     setItems([]);
     setAccountId("");
     setCustomerName("");
+    setCustomerEmail("");
     setDiscountRate(0);
     setGstRate(0);
     setRoundOff(0);
@@ -178,6 +181,17 @@ export default function BillingPage() {
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder="Guest Customer"
+                  className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Customer Email</label>
+                <input
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  placeholder="customer@email.com"
                   className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition"
                 />
               </div>
@@ -312,7 +326,7 @@ export default function BillingPage() {
                 </div>
                 <button
                   onClick={saveInvoice}
-                  disabled={!items.length || saving}
+                  disabled={!items.length || saving || !customerEmail}
                   className="bg-blue-600 hover:bg-blue-500 text-white p-5 rounded-2xl shadow-xl shadow-blue-900/40 transition-all disabled:opacity-50 disabled:grayscale"
                 >
                   {saving ? <RefreshCcw className="animate-spin" /> : <Printer size={28} />}

@@ -9,6 +9,10 @@ const invoiceSchema = new mongoose.Schema(
     },
     invoiceNumber: { type: String, required: true },
     customerName: String,
+    customerEmail: {
+      type: String,
+      required: true,
+    },
     accountId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Account",
