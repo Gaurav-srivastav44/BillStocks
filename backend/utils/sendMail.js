@@ -1,27 +1,33 @@
-import nodemailer from "nodemailer";
+import SibApiV3Sdk from "sib-api-v3-sdk";
 
 const sendMail = async (email, name) => {
   try {
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp-relay.brevo.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 10000,
-    });
+    const client = SibApiV3Sdk.ApiClient.instance;
 
-    const mailOptions = {
-      from: `BillStocks <${process.env.SMTP_USER}>`,
-      to: email,
+    const apiKey = client.authentications["api-key"];
+
+    apiKey.apiKey = process.env.BREVO_API_KEY;
+
+    const tranEmailApi = new SibApiV3Sdk.TransactionalEmailsApi();
+
+    const sender = {
+      email: "billstocks.app@gmail.com",
+      name: "BillStocks",
+    };
+
+    const receivers = [
+      {
+        email: email,
+      },
+    ];
+
+    const response = await tranEmailApi.sendTransacEmail({
+      sender,
+      to: receivers,
       subject: "Welcome to BillStocks 🚀",
-      html: `
+
+      htmlContent: `
         <div style="
           max-width:600px;
           margin:auto;
@@ -40,75 +46,52 @@ const sendMail = async (email, name) => {
             <h1 style="
               color:#2563eb;
               text-align:center;
-              margin-bottom:20px;
             ">
               Welcome to BillStocks 🚀
             </h1>
 
-            <p style="font-size:16px;color:#333;">
+            <p>
               Hello <strong>${name}</strong>,
             </p>
 
-            <p style="
-              font-size:15px;
-              color:#555;
-              line-height:1.7;
-            ">
-              Your account has been successfully created on
-              <strong>BillStocks</strong>.
+            <p>
+              Your account has been successfully created.
             </p>
 
-            <p style="
-              font-size:15px;
-              color:#555;
-              line-height:1.7;
-            ">
+            <p>
               You can now manage inventory, invoices,
-              billing, purchases and reports efficiently.
+              reports and billing.
             </p>
 
-            <div style="text-align:center;margin-top:35px;">
+            <div style="
+              margin-top:30px;
+              text-align:center;
+            ">
               <a
                 href="https://billstocks.netlify.app"
                 style="
                   background:#2563eb;
                   color:white;
+                  padding:12px 24px;
                   text-decoration:none;
-                  padding:14px 28px;
                   border-radius:8px;
-                  display:inline-block;
-                  font-weight:bold;
                 "
               >
                 Open BillStocks
               </a>
             </div>
 
-            <hr style="
-              border:none;
-              border-top:1px solid #e5e7eb;
-              margin:30px 0;
-            ">
-
-            <p style="
-              text-align:center;
-              color:#888;
-              font-size:13px;
-            ">
-              © 2026 BillStocks. All rights reserved.
-            </p>
-
           </div>
         </div>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log("EMAIL SENT:", info.response);
+    console.log("EMAIL SENT:", response);
 
   } catch (error) {
+
     console.log("EMAIL ERROR:", error);
+
   }
 };
 
