@@ -10,7 +10,8 @@ import {
   RefreshCcw, 
   Printer, 
   ShoppingCart,
-  Calculator
+  Calculator,
+  Phone,
 } from "lucide-react";
 import api from "../api";
 
@@ -27,6 +28,7 @@ export default function BillingPage() {
   const [roundOff, setRoundOff] = useState(0);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [customerWhatsApp, setCustomerWhatsApp] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -112,6 +114,7 @@ export default function BillingPage() {
       const res = await api.post("/invoices", {
         customerName: customerName || "Walk-in Customer",
         customerEmail,
+        customerWhatsApp: customerWhatsApp.trim(),
         accountId: accountId || undefined,
         discountRate: Number(discountRate),
         gstRate: Number(gstRate),
@@ -136,6 +139,7 @@ export default function BillingPage() {
     setAccountId("");
     setCustomerName("");
     setCustomerEmail("");
+    setCustomerWhatsApp("");
     setDiscountRate(0);
     setGstRate(0);
     setRoundOff(0);
@@ -194,6 +198,22 @@ export default function BillingPage() {
                   placeholder="customer@email.com"
                   className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <Phone size={14} className="text-emerald-600" /> Customer WhatsApp
+                </label>
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={customerWhatsApp}
+                  onChange={(e) => setCustomerWhatsApp(e.target.value)}
+                  placeholder="e.g. 919876543210"
+                  className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 transition"
+                />
+                <p className="text-[10px] text-slate-400">Include country code for WhatsApp share on the invoice page.</p>
               </div>
 
               <div className="md:col-span-2 space-y-2">

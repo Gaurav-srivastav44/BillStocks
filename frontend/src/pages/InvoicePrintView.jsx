@@ -3,7 +3,12 @@ import { useParams, Link } from "react-router-dom";
 import api from "../api";
 import html2pdf from "html2pdf.js";
 import { useAuth } from "../context/AuthContext";
-import { Printer, Download, ArrowLeft } from "lucide-react";
+import { Printer, Download, ArrowLeft, Mail, MessageCircle } from "lucide-react";
+import {
+  sanitizeWhatsAppNumber,
+  buildInvoiceWhatsAppMessage,
+  buildWhatsAppInvoiceUrl,
+} from "../utils/whatsappInvoiceShare";
 
 const InvoicePrintView = () => {
   const { id } = useParams();
@@ -35,6 +40,10 @@ const InvoicePrintView = () => {
   };
 
   const handleSendMail = async () => {
+    if (!invoice?.customerEmail) {
+      alert("Customer email is missing on this invoice.");
+      return;
+    }
     try {
       setMailSending(true);
       const element = printRef.current;
@@ -70,11 +79,30 @@ const InvoicePrintView = () => {
 
       alert("Invoice sent successfully");
     } catch (error) {
-      console.log(error);
-      alert("Failed to send invoice");
+      console.error("Mail send failed:", error);
+      alert("Failed to send invoice email. Check your connection and try again.");
     } finally {
       setMailSending(false);
     }
+  };
+
+  /** Opens WhatsApp (app / Web / mobile) with a prefilled message; user must tap Send. */
+  const handleWhatsAppShare = () => {
+    const { ok, digits, error } = sanitizeWhatsAppNumber(invoice?.customerWhatsApp);
+    if (!ok || !digits) {
+      alert(error);
+      return;
+    }
+
+    const displayName = invoice.account?.name || invoice.customerName || "Customer";
+    const message = buildInvoiceWhatsAppMessage({
+      invoiceNumber: invoice.invoiceNumber,
+      customerName: displayName,
+      grandTotal: invoice.grandTotal,
+    });
+
+    const url = buildWhatsAppInvoiceUrl({ phoneDigits: digits, message });
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   if (!invoice)
@@ -98,27 +126,44 @@ const InvoicePrintView = () => {
           <ArrowLeft size={18} /> Back to List
         </Link>
 
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-stretch sm:justify-end">
           <button
+            type="button"
             onClick={handlePrint}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm text-sm"
+            className="flex-1 min-w-[7rem] sm:flex-none flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-xl font-bold hover:bg-slate-50 transition shadow-sm text-sm"
           >
             <Printer size={16} /> Print
           </button>
 
           <button
+            type="button"
             onClick={handleDownload}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl font-bold hover:bg-slate-800 transition shadow-md text-sm"
+            className="flex-1 min-w-[7rem] sm:flex-none flex items-center justify-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl font-bold hover:bg-slate-800 transition shadow-md text-sm"
           >
             <Download size={16} /> PDF
           </button>
 
           <button
+            type="button"
             onClick={handleSendMail}
             disabled={mailSending || !invoice?.customerEmail}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700 transition shadow-md text-sm disabled:opacity-60"
+            className="flex-1 min-w-[7rem] sm:flex-none flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700 transition shadow-md text-sm disabled:opacity-60"
           >
-            {mailSending ? "Sending..." : "Send Mail"}
+            {mailSending ? (
+              <>Sending...</>
+            ) : (
+              <>
+                <Mail size={16} /> Mail
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleWhatsAppShare}
+            className="flex-1 min-w-[7rem] sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-br from-emerald-500 to-green-700 text-white px-4 py-2 rounded-xl font-bold hover:from-emerald-600 hover:to-green-800 transition shadow-md shadow-emerald-900/20 text-sm ring-1 ring-emerald-400/30"
+          >
+            <MessageCircle size={16} className="shrink-0" /> WhatsApp
           </button>
         </div>
       </div>

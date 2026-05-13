@@ -13,6 +13,12 @@ const invoiceSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    /** Customer WhatsApp / mobile for wa.me share (optional; stored as entered, sanitized in UI). */
+    customerWhatsApp: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     accountId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Account",
