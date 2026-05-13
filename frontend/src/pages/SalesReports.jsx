@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../api";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Calendar, ChevronLeft, ChevronRight, FileText, List, TrendingUp, DollarSign, User } from "lucide-react";
+import ReportExportToolbar from "../components/ReportExportToolbar";
 
 const SalesReports = () => {
+  const salesExportRef = useRef(null);
   const [tab, setTab] = useState("billwise");
   const [billwise, setBillwise] = useState([]);
   const [detailed, setDetailed] = useState([]);
@@ -71,6 +73,38 @@ const SalesReports = () => {
 
   const totalMonthSales = filteredMonthBills.reduce((sum, b) => sum + (b.grandTotal || 0), 0);
 
+  const reportPeriodLabel = new Date(activeYear, activeMonth, 1).toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const pdfFileSlug = `Sales_Report_${activeYear}_${String(activeMonth + 1).padStart(2, "0")}`;
+
+  const getExcelSheets = useCallback(() => {
+    if (tab === "billwise") {
+      const rows = filteredMonthBills.map((b) => ({
+        Invoice: b.invoiceNumber,
+        Customer: b.customerName || b.customer?.name || "Cash Sale",
+        Date: new Date(b.createdAt).toLocaleDateString(),
+        Total_INR: b.grandTotal ?? 0,
+      }));
+      rows.push({
+        Invoice: "",
+        Customer: "",
+        Date: "MONTH TOTAL",
+        Total_INR: totalMonthSales,
+      });
+      return [{ sheetName: "Sales_Data", rows }];
+    }
+    const rows = detailed.map((row) => ({
+      Invoice: row.invoiceNumber,
+      Item: row.item,
+      Qty: row.qty,
+      LineTotal_INR: row.lineTotal ?? 0,
+    }));
+    return [{ sheetName: "Sales_Detailed", rows }];
+  }, [tab, filteredMonthBills, detailed, totalMonthSales]);
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 text-slate-800">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -78,11 +112,21 @@ const SalesReports = () => {
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Sales Analytics</h1>
           <p className="text-slate-500">Track your business growth and daily performance</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3">
-          <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><DollarSign size={20}/></div>
-          <div>
-            <p className="text-xs text-slate-500 uppercase font-bold">Monthly Revenue</p>
-            <p className="text-xl font-bold text-slate-900">₹{totalMonthSales.toLocaleString()}</p>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <ReportExportToolbar
+            pdfTargetRef={salesExportRef}
+            pdfFileSlug={pdfFileSlug}
+            reportTitle="Sales report"
+            reportSubtitle={`${reportPeriodLabel} · Tab: ${tab === "billwise" ? "Billwise" : "Detailed"}`}
+            getExcelSheets={getExcelSheets}
+            disabled={loading}
+          />
+          <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><DollarSign size={20}/></div>
+            <div>
+              <p className="text-xs text-slate-500 uppercase font-bold">Monthly Revenue</p>
+              <p className="text-xl font-bold text-slate-900">₹{totalMonthSales.toLocaleString()}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -158,8 +202,20 @@ const SalesReports = () => {
         </div>
       )}
 
-      {/* Bottom Section Table */}
-      <div className="bg-white shadow-sm rounded-3xl border border-slate-200 overflow-hidden">
+      {/* Bottom Section Table — ref wraps PDF/Excel export region (matches visible tab + month filter) */}
+      <div
+        ref={salesExportRef}
+        className="bg-white shadow-sm rounded-3xl border border-slate-200 overflow-hidden"
+      >
+        <div className="px-6 pt-6 pb-2 border-b border-slate-100 bg-slate-900 text-white rounded-t-3xl">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">BillStocks</p>
+          <h2 className="text-lg font-black tracking-tight">Sales report</h2>
+          <p className="text-sm text-slate-300 mt-1">Period: {reportPeriodLabel}</p>
+          <p className="text-xs text-slate-400 mt-1">Generated: {new Date().toLocaleString()}</p>
+          <p className="text-sm font-bold mt-2 border-t border-slate-700 pt-2">
+            Month total: ₹{totalMonthSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+        </div>
         <div className="p-6 border-b border-slate-100 flex flex-wrap gap-4 items-center justify-between bg-slate-50/50">
           <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
             <button

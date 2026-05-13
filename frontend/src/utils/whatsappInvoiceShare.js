@@ -40,13 +40,13 @@ export function buildInvoiceWhatsAppMessage({ invoiceNumber, customerName, grand
 
   return `Hello ${name},
 
-Your BillStocks invoice is ready.
+Your invoice from BillStocks is attached / ready to share.
 
-Invoice #${invoiceNumber}
+Invoice #: ${invoiceNumber}
 Customer: ${name}
-Total: ₹${total}
+Total amount: ₹${total}
 
-Thank you for choosing BillStocks.`;
+Thank you for your business — we appreciate you choosing BillStocks.`;
 }
 
 export function buildWhatsAppInvoiceUrl({ phoneDigits, message }) {

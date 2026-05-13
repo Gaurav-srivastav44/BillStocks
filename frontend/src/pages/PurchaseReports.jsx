@@ -1,8 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../api";
 import { Search, FileText, List, IndianRupee, Package } from "lucide-react"; // Optional: Lucide icons for flair
+import ReportExportToolbar from "../components/ReportExportToolbar";
 
 const PurchaseReports = () => {
+  const purchaseExportRef = useRef(null);
   const [tab, setTab] = useState("billwise");
   const [billwise, setBillwise] = useState([]);
   const [detailed, setDetailed] = useState([]);
@@ -33,6 +35,48 @@ const PurchaseReports = () => {
     ? billwise.filter(b => b.purchaseNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || b.supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
     : detailed.filter(d => d.item?.toLowerCase().includes(searchTerm.toLowerCase()) || d.purchaseNumber?.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  const filteredTableTotal = useMemo(() => {
+    if (tab === "billwise") {
+      return filteredData.reduce((sum, row) => sum + (Number(row.grandTotal) || 0), 0);
+    }
+    return filteredData.reduce((sum, row) => sum + (Number(row.lineTotal) || 0), 0);
+  }, [tab, filteredData]);
+
+  const getExcelSheets = useCallback(() => {
+    if (tab === "billwise") {
+      const rows = filteredData.map((item) => ({
+        PurchaseNo: item.purchaseNumber,
+        Supplier: item.supplier?.name || "N/A",
+        Date: new Date(item.createdAt).toLocaleDateString(),
+        Total_INR: item.grandTotal ?? 0,
+      }));
+      rows.push({
+        PurchaseNo: "",
+        Supplier: "",
+        Date: "FILTERED TOTAL",
+        Total_INR: filteredTableTotal,
+      });
+      return [{ sheetName: "Purchase_Billwise", rows }];
+    }
+    const rows = filteredData.map((item) => ({
+      PurchaseNo: item.purchaseNumber,
+      Item: item.item,
+      Qty: item.qty,
+      Price_INR: item.price,
+      LineTotal_INR: item.lineTotal ?? 0,
+      Date: item.date ? new Date(item.date).toLocaleDateString() : "",
+    }));
+    rows.push({
+      PurchaseNo: "",
+      Item: "",
+      Qty: "",
+      Price_INR: "",
+      LineTotal_INR: filteredTableTotal,
+      Date: "FILTERED TOTAL",
+    });
+    return [{ sheetName: "Purchase_Detailed", rows }];
+  }, [tab, filteredData, filteredTableTotal]);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans text-gray-900">
       {/* 1. Header & Stats Section */}
@@ -42,7 +86,16 @@ const PurchaseReports = () => {
             <h1 className="text-2xl font-bold text-gray-800">Purchase Analytics</h1>
             <p className="text-gray-500 text-sm">Track and manage your procurement data</p>
           </div>
-          
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <ReportExportToolbar
+              pdfTargetRef={purchaseExportRef}
+              pdfFileSlug={`Purchase_Report_${tab}`}
+              reportTitle="Purchase report"
+              reportSubtitle={`Tab: ${tab === "billwise" ? "Billwise" : "Detailed"} · Search: "${searchTerm || "—"}"`}
+              getExcelSheets={getExcelSheets}
+              disabled={loading}
+            />
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
               <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Package size={20} /></div>
@@ -59,10 +112,19 @@ const PurchaseReports = () => {
               </div>
             </div>
           </div>
+          </div>
         </div>
 
         {/* 2. Controls Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div ref={purchaseExportRef} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-5 pt-5 pb-3 bg-gray-900 text-white rounded-t-2xl">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">BillStocks</p>
+          <h2 className="text-lg font-bold">Purchase report</h2>
+          <p className="text-xs text-gray-400 mt-1">Generated: {new Date().toLocaleString()}</p>
+          <p className="text-sm font-semibold mt-2">
+            Filtered total ({tab}): ₹{filteredTableTotal.toLocaleString("en-IN")}
+          </p>
+        </div>
           <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white">
             {/* Tab Switcher */}
             <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto">

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api";
@@ -10,6 +10,15 @@ import {
   buildWhatsAppInvoiceUrl,
 } from "../utils/whatsappInvoiceShare";
 import { renderInvoicePdfBlob, triggerPdfBlobDownload } from "../utils/invoicePdfExport";
+import { shareInvoicePdfWithWhatsApp } from "../utils/invoiceWhatsAppShare";
+import { QRCodeSVG } from "qrcode.react";
+import { paymentConfig, buildUpiPayIntentUrl } from "../config/paymentConfig.js";
+
+/** Lets SVG QR + layout settle before html2canvas (improves PDF capture). */
+async function waitForUpiQrPaint() {
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  await new Promise((resolve) => setTimeout(resolve, 120));
+}
 
 const btnBase =
   "flex-1 min-w-[7rem] sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ease-out shadow-md disabled:opacity-55 disabled:cursor-not-allowed disabled:shadow-none hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500";
@@ -22,6 +31,11 @@ const InvoicePrintView = () => {
   const printRef = useRef();
   const { user } = useAuth();
 
+  const upiIntentUrl = useMemo(
+    () => buildUpiPayIntentUrl(invoice?.grandTotal),
+    [invoice?.grandTotal]
+  );
+
   useEffect(() => {
     api
       .get(`/invoices/${id}`)
@@ -32,6 +46,7 @@ const InvoicePrintView = () => {
   /** Standalone PDF download from the invoice preview (html2pdf → blob → save). */
   const handleDownload = async () => {
     try {
+      await waitForUpiQrPaint();
       const blob = await renderInvoicePdfBlob(printRef.current, invoice.invoiceNumber);
       triggerPdfBlobDownload(blob, `BillStocks_Inv_${invoice.invoiceNumber}.pdf`);
       toast.success("PDF downloaded successfully");
@@ -57,6 +72,7 @@ const InvoicePrintView = () => {
 
     try {
       const element = printRef.current;
+      await waitForUpiQrPaint();
       const pdfBlob = await renderInvoicePdfBlob(element, invoice.invoiceNumber, {
         image: { quality: 1 },
       });
@@ -81,8 +97,8 @@ const InvoicePrintView = () => {
   };
 
   /**
-   * WhatsApp share: generate PDF, download for the customer record, then open wa.me with prefilled text.
-   * User still taps Send inside WhatsApp (no silent auto-send).
+   * WhatsApp + PDF: on capable mobile browsers uses Web Share API (pick WhatsApp, PDF attaches).
+   * Otherwise: download PDF + open wa.me with prefilled message (desktop / WhatsApp Web).
    */
   const handleWhatsAppShare = async () => {
     const { ok, digits, error } = sanitizeWhatsAppNumber(invoice?.customerWhatsApp);
@@ -92,33 +108,36 @@ const InvoicePrintView = () => {
     }
 
     setWhatsappBusy(true);
-    const toastId = toast.loading("Preparing PDF and WhatsApp…");
+    const toastId = toast.loading("Preparing invoice PDF…");
 
     try {
+      await waitForUpiQrPaint();
       const blob = await renderInvoicePdfBlob(printRef.current, invoice.invoiceNumber, {
         image: { quality: 1 },
       });
-      triggerPdfBlobDownload(blob, `BillStocks_Inv_${invoice.invoiceNumber}.pdf`);
 
       const displayName = invoice.account?.name || invoice.customerName || "Customer";
-      const message = buildInvoiceWhatsAppMessage({
+      const shareCaption = buildInvoiceWhatsAppMessage({
         invoiceNumber: invoice.invoiceNumber,
         customerName: displayName,
         grandTotal: invoice.grandTotal,
       });
-      const url = buildWhatsAppInvoiceUrl({ phoneDigits: digits, message });
+      const waUrl = buildWhatsAppInvoiceUrl({ phoneDigits: digits, message: shareCaption });
+      const pdfName = `BillStocks_Invoice_${invoice.invoiceNumber}.pdf`;
 
-      // Brief delay helps mobile browsers finish the download before opening WhatsApp / Web.
-      await new Promise((r) => setTimeout(r, 150));
-      const popup = window.open(url, "_blank", "noopener,noreferrer");
+      const result = await shareInvoicePdfWithWhatsApp({
+        pdfBlob: blob,
+        filename: pdfName,
+        shareCaption,
+        waMeUrl: waUrl,
+      });
 
-      if (popup) {
-        toast.success("PDF downloaded and WhatsApp opened", { id: toastId });
+      if (result.mode === "web_share") {
+        toast.success("Invoice shared — pick WhatsApp to send the PDF", { id: toastId });
+      } else if (result.mode === "aborted") {
+        toast("Sharing cancelled", { id: toastId, duration: 2800 });
       } else {
-        toast.success("PDF downloaded. Allow pop-ups for this site to open WhatsApp automatically.", {
-          id: toastId,
-          duration: 5500,
-        });
+        toast.success("PDF downloaded and WhatsApp opened", { id: toastId });
       }
     } catch (err) {
       console.error("WhatsApp / PDF flow failed:", err);
@@ -297,8 +316,54 @@ const InvoicePrintView = () => {
             </div>
           </div>
 
+          {/* UPI — Scan & Pay (inside #print-area so print + html2pdf include the QR) */}
+          <div className="mt-10 flex justify-center">
+            <div className="w-full max-w-sm rounded-xl border-2 border-slate-200 bg-gradient-to-b from-slate-50 to-white px-5 py-6 text-center shadow-sm">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">
+                Scan & Pay
+              </p>
+              <p className="text-lg font-black text-slate-900 tracking-tight">UPI</p>
+              <p className="text-xs text-slate-500 mt-1 mb-4">Pay using any UPI app</p>
+
+              {upiIntentUrl ? (
+                <>
+                  <div
+                    className="mx-auto inline-flex rounded-xl bg-white p-3 border border-slate-200 shadow-inner upi-qr-print"
+                    aria-label="UPI payment QR code"
+                  >
+                    <QRCodeSVG value={upiIntentUrl} size={168} level="M" includeMargin={false} />
+                  </div>
+                  <p className="mt-4 text-xs font-semibold text-slate-600 break-all">
+                    {String(paymentConfig.upiId || "").trim()}
+                  </p>
+                  <p className="mt-2 text-sm font-bold text-slate-900">
+                    Amount: ₹{Number(invoice.grandTotal).toFixed(2)}
+                  </p>
+                </>
+              ) : (
+                <div
+                  role="status"
+                  className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-left text-xs text-amber-900"
+                >
+                  {!String(paymentConfig.upiId || "").trim() ? (
+                    <>
+                      <span className="font-bold">UPI not configured.</span> Set{" "}
+                      <code className="rounded bg-amber-100 px-1">upiId</code> in{" "}
+                      <code className="rounded bg-amber-100 px-1">src/config/paymentConfig.js</code>.
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-bold">QR unavailable.</span> Invoice total must be a
+                      positive amount for UPI payment links.
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Signature */}
-          <div className="mt-20 text-right">
+          <div className="mt-12 text-right">
             <p className="border-t pt-2 w-48 ml-auto text-sm">Authorized Signatory</p>
           </div>
         </div>
@@ -314,6 +379,10 @@ const InvoicePrintView = () => {
 
           #print-area, #print-area * {
             visibility: visible;
+          }
+
+          .upi-qr-print svg {
+            shape-rendering: crispEdges;
           }
 
           #print-area {
